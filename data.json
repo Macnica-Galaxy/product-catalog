@@ -270,7 +270,7 @@
       "Logo": "https://lh7-rt.googleusercontent.com/sheetsz/AHOq17ElhKdYES0q-Pjti1ArlKSZ7II8Ffwy1Cr8V7WOVe8S8gu1WybB0gT6wnSOsjxPn9m2uxzOXNTyPXvNDdGYiT0PtBIoPrt0XSvHZG50BwGpNCSht95JLTHMWvEuuoUy_GQYGaYx_WkW2dmmJcSFmcy74vzrmtTKCAp0J294d39JHHee=s2048?key=AyfvQqctzlubOKtKjjRBbg",
       "產品線 / 原廠": "Graid Technology",
       "所在地 / 區域": "美國",
-      "主要產品": "產品為Software RAID(容錯式磁碟陣列)，為運算系統提供高速資料儲存防護機制。SupremeRAID™ 運用 GPU 加速徹底釋放 NVMe SSD的極致效能；並��承接了Intel VROC™，提供成熟可靠的CPU RAID, 支持Intel Xeon platform。",
+      "主要產品": "產品為Software RAID(容錯式磁碟陣列)，為運算系統提供高速資料儲存防護機制。SupremeRAID™ 運用 GPU 加速徹底釋放 NVMe SSD的極致效能；並且承接了Intel VROC™，提供成熟可靠的CPU RAID, 支持Intel Xeon platform。",
       "官網": "https://graidtech.com/"
     },
     {
@@ -305,7 +305,7 @@
       "Logo": "https://lh7-rt.googleusercontent.com/sheetsz/AHOq17H_tSBnEMoealomBmRgtLMX5S9cTooex5ecnYP7nkAoN6C5mvagxQ1uig2oxXPp3_Kz-Or_2bnxsnFI_mqPcfeD1hLkgjRfEs4cvRWWobjs-Qih1YV1sBM8C_j05sC33I21YmniW62rrUxWk0gCzTH_9ELf6_KqZv5X4qDaVZB8rk85=s2048?key=AyfvQqctzlubOKtKjjRBbg",
       "產品線 / 原廠": "Delta",
       "所在地 / 區域": "台灣",
-      "主要產品": "專為 MCU、SoC 與 BMC 等嵌入式軟硬體與網通設備打造。能自動進行二進位檔反向剖析，快速產出標準 SBOM 並精準比對 CVE 漏洞 ，助力企業在開發初期落實資安前置（Shift-Left），��鬆達成歐盟 CRA、IEC 62443及SEMI E187 等國際合規認證！",
+      "主要產品": "專為 MCU、SoC 與 BMC 等嵌入式軟硬體與網通設備打造。能自動進行二進位檔反向剖析，快速產出標準 SBOM 並精準比對 CVE 漏洞 ，助力企業在開發初期落實資安前置（Shift-Left），輕鬆達成歐盟 CRA、IEC 62443及SEMI E187 等國際合規認證！",
       "官網": "https://www.deltaww.com/en-US/solutions/cybersecurity-compliance-solutions-for-industrial-control-systems"
     },
     {
@@ -333,7 +333,7 @@
       "Logo": "https://lh7-rt.googleusercontent.com/sheetsz/AHOq17EaNCwW5tLlvzdpnTPk69H_WL1z2rNirsVNjBfCbDftaN4OvzCTii1ZEiNMytXGED5WVNSdet498lAaPLFsmOEQALZUtzZChcoE5HBE3EcEdpzWJ8rD7j9Pw7xvS_T5pnHVeMemSGZTNLcvgOMqiS0x-kuSOmQUcbwGEOvZw0PJn5i5=s2048?key=AyfvQqctzlubOKtKjjRBbg",
       "產品線 / 原廠": "TI",
       "所在地 / 區域": "美國",
-      "主要產品": "微控制器(MCU), 微處理器(MPU), 數位訊號處理器(DSP), 車用相關處理器SoC, 多功能SoC, 數位光學處理器(DLP), \n藍芽低功秏, 前端模組, WiFi, Wi-SUN, Sub-1G, 2.4G, Zigbee, \n溫溼度感測器, mmWave雷達感測器, 光學感測器, 磁性感測器, 專業感測器(超音波/電感), \n音訊晶片, 觸控晶片, 類比/數位轉換器(ADC/DAC), 光耦器, 放大器(OP), 邏輯閘(Logic), 時脈產生器, 時脈緩衝器, 時脈抖動衰減器, 即時時鐘, BAW振盪器, CAN/LIN/RS232/485收發器,  HDMI/影像相關晶片, USB相���晶片, 位準轉換器, 乙太網路晶片, 隔離器, 無線射頻相關晶片, 類比開關/多工器, FPD-Link晶片, \n核心電源, 電源相關晶片, LED驅動, 電池管理, 馬達驅動器, \n電晶體, 保護元件, MOSFET",
+      "主要產品": "微控制器(MCU), 微處理器(MPU), 數位訊號處理器(DSP), 車用相關處理器SoC, 多功能SoC, 數位光學處理器(DLP), \n藍芽低功秏, 前端模組, WiFi, Wi-SUN, Sub-1G, 2.4G, Zigbee, \n溫溼度感測器, mmWave雷達感測器, 光學感測器, 磁性感測器, 專業感測器(超音波/電感), \n音訊晶片, 觸控晶片, 類比/數位轉換器(ADC/DAC), 光耦器, 放大器(OP), 邏輯閘(Logic), 時脈產生器, 時脈緩衝器, 時脈抖動衰減器, 即時時鐘, BAW振盪器, CAN/LIN/RS232/485收發器,  HDMI/影像相關晶片, USB相關晶片, 位準轉換器, 乙太網路晶片, 隔離器, 無線射頻相關晶片, 類比開關/多工器, FPD-Link晶片, \n核心電源, 電源相關晶片, LED驅動, 電池管理, 馬達驅動器, \n電晶體, 保護元件, MOSFET",
       "官網": "https://www.ti.com/zh-tw/homepage.html"
     }
   ],
