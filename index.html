@@ -39,7 +39,7 @@
     </div>
     <div class="text-center space-y-1">
       <p id="loadingStatusText" class="text-base font-bold text-gray-800">資料同步中，請稍候...</p>
-      <p class="text-xs text-gray-500">正在連線 Google Sheets 資料庫</p>
+      <p class="text-xs text-gray-500">正在載入產品資料庫</p>
     </div>
   </div>
 
@@ -230,6 +230,7 @@
 
     // ⚠️ 請換成您真實的 Apps Script API 網址（結尾為 /exec）
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwfn_bO64Jso9QkpmSRWfXTvEIIh8Q4Ovy0uhqycJRhV1j5Dt-9jJWpjqTvi-lFTB4o/exec";
+    const STATIC_DATA_URL = "./data.json";
 
     function setRefreshSpinning(isSpinning) {
       const btn = document.getElementById('refreshBtn');
@@ -241,46 +242,77 @@
       }
     }
 
-    // 🌟 原生 fetch 直接請求，無人為逾時中斷限制
-    function fetchSheetData() {
+    // 🌟 優先載入快取與靜態 data.json 達成秒開，並在背景非同步與 Google Sheets 同步
+    async function fetchSheetData() {
+      let loaded = false;
+
+      // 1. 優先檢查瀏覽器本地快取
       const localCache = localStorage.getItem('macnica_product_line_local');
       if (localCache) {
         try {
           const parsedData = JSON.parse(localCache);
-          onDataLoaded(parsedData, true);
-        } catch(e) {}
-      } else {
+          if (parsedData && parsedData.rows && parsedData.rows.length > 0) {
+            onDataLoaded(parsedData, true);
+            loaded = true;
+          }
+        } catch(e) {
+          console.warn("解析本地快取失敗", e);
+        }
+      }
+
+      // 2. 若無快取，極速讀取專案靜態 data.json 達成即時載入
+      if (!loaded) {
+        try {
+          const staticRes = await fetch(STATIC_DATA_URL);
+          if (staticRes.ok) {
+            const staticData = await staticRes.json();
+            if (staticData && staticData.rows && staticData.rows.length > 0) {
+              onDataLoaded(staticData, false);
+              localStorage.setItem('macnica_product_line_local', JSON.stringify(staticData));
+              loaded = true;
+            }
+          }
+        } catch (e) {
+          console.warn("靜態 data.json 載入失敗，將等待線上資料庫連線", e);
+        }
+      }
+
+      if (!loaded) {
         setSearchDisabled(true);
       }
 
+      // 3. 背景靜默請求 Google Sheets 同步最新資料（不阻斷使用者操作）
       fetch(GAS_API_URL)
         .then(response => {
           if (!response.ok) throw new Error(`HTTP 錯誤: ${response.status}`);
           return response.json();
         })
         .then(data => {
-          if (!data.error) {
+          if (!data.error && data.rows && data.rows.length > 0) {
             localStorage.setItem('macnica_product_line_local', JSON.stringify(data));
+            if (!loaded) {
+              onDataLoaded(data, false);
+            } else if (data.lastUpdated && data.lastUpdated !== localStorage.getItem('macnica_last_updated')) {
+              // 若線上版本更新，自動更新畫面與統計
+              onDataLoaded(data, false);
+            }
           }
-          onDataLoaded(data, false);
         })
         .catch(err => {
-          console.error(err);
-          if (!localCache) onDataError(err);
+          console.error("線上 Google Sheets 同步異常:", err);
+          if (!loaded) onDataError(err);
         });
     }
 
-    // 🌟 原生 fetch 重新整理請求
+    // 🌟 手動重新整理請求（強制向 Google Sheets 請求最新資料）
     function refreshData() {
       setRefreshSpinning(true);
-      localStorage.removeItem('macnica_product_line_local');
 
       const loadingOverlay = document.getElementById('globalLoading');
       const statusText = document.getElementById('loadingStatusText');
       if (loadingOverlay) {
         if (statusText) statusText.innerText = '正在重新整理，同步最新資料...';
-        loadingOverlay.classList.remove('hidden');
-        loadingOverlay.classList.remove('opacity-0');
+        loadingOverlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
       }
       setSearchDisabled(true);
 
@@ -299,7 +331,13 @@
         })
         .catch(err => {
           console.error(err);
-          onDataError(err);
+          // 若線上刷新失敗但有靜態快取，恢復顯示避免畫面空白
+          const localCache = localStorage.getItem('macnica_product_line_local');
+          if (localCache) {
+            onDataLoaded(JSON.parse(localCache), true);
+          } else {
+            onDataError(err);
+          }
         })
         .finally(() => {
           setRefreshSpinning(false);
