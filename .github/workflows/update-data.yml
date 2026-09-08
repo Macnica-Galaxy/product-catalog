@@ -67,11 +67,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          if [ -n \"\$(git status --porcelain data.json)\" ]; then
-            echo \"偵測到產品資料有變更，正在 Commit 並 Push 至 Repository...\"
-            git add data.json
-            git commit -m \"Auto-update data.json from Google Sheets [skip ci]\"
-            git push
+          if git diff --quiet data.json; then
+            echo "資料與現有 data.json 相同，無需更新。"
           else
-            echo \"資料與現有 data.json 相同，無需更新。\"
+            echo "偵測到產品資料有變更，正在 Commit 並 Push 至 Repository..."
+            git add data.json
+            git commit -m "Auto-update data.json from Google Sheets [skip ci]"
+            git push
           fi
+
