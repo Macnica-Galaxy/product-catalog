@@ -16,37 +16,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Fetch and Validate Data from Google Sheets
         run: |
           node -e "
-            const https = require('https');
             const fs = require('fs');
-
             const url = 'https://script.google.com/macros/s/AKfycbwfn_bO64Jso9QkpmSRWfXTvEIIh8Q4Ovy0uhqycJRhV1j5Dt-9jJWpjqTvi-lFTB4o/exec';
-
-            function fetchUrl(targetUrl) {
-              return new Promise((resolve, reject) => {
-                https.get(targetUrl, (res) => {
-                  if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    return resolve(fetchUrl(res.headers.location));
-                  }
-                  let data = '';
-                  res.on('data', chunk => data += chunk);
-                  res.on('end', () => resolve(data));
-                }).on('error', reject);
-              });
-            }
 
             async function run() {
               console.log('正在連線 Google Apps Script 取得最新產品目錄...');
-              const rawText = await fetchUrl(url);
-              const json = JSON.parse(rawText);
+              const res = await fetch(url, { redirect: 'follow' });
+              if (!res.ok) throw new Error('HTTP 錯誤代碼: ' + res.status);
 
+              const json = await res.json();
               if (json.error || !json.rows || !Array.isArray(json.rows) || json.rows.length === 0) {
                 throw new Error('取得之資料為空或格式不符，中止更新以保護現有 data.json！');
               }
