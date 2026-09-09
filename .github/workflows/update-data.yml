@@ -1,4 +1,4 @@
-name: Auto Update Product Data
+name: Auto Update Product Catalog
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch: # 支援在 GitHub 網頁上隨時手動點擊按鈕觸發
 
 jobs:
-  update-data:
+  update-catalog:
     runs-on: ubuntu-latest
     permissions:
       contents: write # 允許 GitHub Actions 自動提交並推送變更到 Repository
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Fetch and Validate Data from Google Sheets
+      - name: Fetch Data, Convert Logos to Base64, and Update index.html
         run: |
           node -e "
             const fs = require('fs');
@@ -29,12 +29,81 @@ jobs:
 
               const json = await res.json();
               if (json.error || !json.rows || !Array.isArray(json.rows) || json.rows.length === 0) {
-                throw new Error('取得之資料為空或格式不符，中止更新以保護現有 data.json！');
+                throw new Error('取得之資料為空或格式不符，中止更新以保護現有 index.html！');
               }
 
-              console.log('成功取得 ' + json.rows.length + ' 筆產品資料。');
-              fs.writeFileSync('data.json', JSON.stringify(json, null, 2) + '\n', 'utf8');
-              console.log('已成功寫入 data.json。');
+              console.log('成功取得 ' + json.rows.length + ' 筆產品資料。正在讀取 index.html 既有 Base64 備援...');
+              let indexHtml = fs.readFileSync('index.html', 'utf8');
+
+              const existingLogos = {};
+              const startMarker = '/* EMBEDDED_DATA_START */';
+              const endMarker = '/* EMBEDDED_DATA_END */';
+
+              const sIdx = indexHtml.indexOf(startMarker);
+              const eIdx = indexHtml.indexOf(endMarker);
+
+              if (sIdx === -1 || eIdx === -1) {
+                throw new Error('找不到 EMBEDDED_DATA 標記，無法安全替換！');
+              }
+
+              // 擷取現有 Base64 作為下載失敗時的保險備援
+              const currentEmbeddedBlock = indexHtml.substring(sIdx, eIdx);
+              const matchData = currentEmbeddedBlock.match(/const EMBEDDED_DATA = ([\\s\\S]*?);\\s*$/);
+              if (matchData) {
+                try {
+                  const currentData = JSON.parse(matchData[1]);
+                  currentData.rows.forEach(r => {
+                    const name = r['產品線 / 原廠'];
+                    if (name && r['Logo'] && r['Logo'].startsWith('data:')) {
+                      existingLogos[name] = r['Logo'];
+                    }
+                  });
+                } catch (e) {
+                  console.warn('解析現有 EMBEDDED_DATA 失敗:', e.message);
+                }
+              }
+
+              console.log('正在平行下載最新 Logo 並轉換為 Base64...');
+              let converted = 0;
+              await Promise.all(json.rows.map(async row => {
+                const logoUrl = row['Logo'];
+                const name = row['產品線 / 原廠'];
+                if (!logoUrl) return;
+
+                if (logoUrl.startsWith('data:image/')) {
+                  converted++;
+                  return;
+                }
+
+                try {
+                  const imgRes = await fetch(logoUrl);
+                  if (imgRes.ok) {
+                    const contentType = imgRes.headers.get('content-type') || 'image/png';
+                    const buf = await imgRes.arrayBuffer();
+                    const base64 = Buffer.from(buf).toString('base64');
+                    row['Logo'] = 'data:' + contentType + ';base64,' + base64;
+                    converted++;
+                  } else if (existingLogos[name]) {
+                    console.warn('Logo 下載失敗 (' + imgRes.status + ')，保留既有 Base64: ' + name);
+                    row['Logo'] = existingLogos[name];
+                    converted++;
+                  }
+                } catch (e) {
+                  if (existingLogos[name]) {
+                    console.warn('Logo 下載異常 (' + e.message + ')，保留既有 Base64: ' + name);
+                    row['Logo'] = existingLogos[name];
+                    converted++;
+                  }
+                }
+              }));
+
+              console.log('Logo 處理完成 (' + converted + '/' + json.rows.length + ')。更新 index.html...');
+              const newEmbeddedBlock = startMarker + '\\n    // 📦 預設內嵌產品資料（包含所有 Logo 的 Base64 編碼，100% 獨立單檔無網路亦可秒開）\\n    const EMBEDDED_DATA = ' + JSON.stringify(json, null, 2) + ';\\n    ';
+
+              indexHtml = indexHtml.substring(0, sIdx) + newEmbeddedBlock + indexHtml.substring(eIdx);
+
+              fs.writeFileSync('index.html', indexHtml, 'utf8');
+              console.log('已成功將最新 EMBEDDED_DATA 寫入 index.html。');
             }
 
             run().catch(err => {
@@ -48,12 +117,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          if git diff --quiet data.json; then
-            echo "資料與現有 data.json 相同，無需更新。"
+          if git diff --quiet index.html; then
+            echo "資料與現有 index.html 相同，無需更新。"
           else
             echo "偵測到產品資料有變更，正在 Commit 並 Push 至 Repository..."
-            git add data.json
-            git commit -m "Auto-update data.json from Google Sheets [skip ci]"
+            git add index.html
+            git commit -m "Auto-update EMBEDDED_DATA in index.html from Google Sheets [skip ci]"
             git push
           fi
-
