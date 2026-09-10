@@ -97,7 +97,23 @@ jobs:
                 }
               }));
 
-              console.log('Logo 處理完成 (' + converted + '/' + json.rows.length + ')。更新 index.html...');
+              console.log('Logo 處理完成 (' + converted + '/' + json.rows.length + ')。進行 Segment 及 A-Z 排序...');
+              const SEGMENT_ORDER = ['Semiconductor', 'Software', 'System', 'Cyber Security'];
+              json.rows.sort((a, b) => {
+                const segA = (a['Segment'] || '').trim();
+                const segB = (b['Segment'] || '').trim();
+                const idxA = SEGMENT_ORDER.indexOf(segA);
+                const idxB = SEGMENT_ORDER.indexOf(segB);
+                const orderA = idxA === -1 ? 999 : idxA;
+                const orderB = idxB === -1 ? 999 : idxB;
+                if (orderA !== orderB) return orderA - orderB;
+
+                const nameA = String(a['產品線 / 原廠'] || '').trim();
+                const nameB = String(b['產品線 / 原廠'] || '').trim();
+                return nameA.localeCompare(nameB, 'en', { sensitivity: 'base', numeric: true });
+              });
+
+              console.log('排序完成，更新 index.html...');
               const newEmbeddedBlock = startMarker + '\\n    // 📦 預設內嵌產品資料（包含所有 Logo 的 Base64 編碼，100% 獨立單檔無網路亦可秒開）\\n    const EMBEDDED_DATA = ' + JSON.stringify(json, null, 2) + ';\\n    ';
 
               indexHtml = indexHtml.substring(0, sIdx) + newEmbeddedBlock + indexHtml.substring(eIdx);
