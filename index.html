@@ -2027,7 +2027,7 @@ lucide.createIcons({icons});\``);if(typeof d>"u")throw new Error("`createIcons()
     let headers = [];
     let productLineKey = '';
     let mainProductKey = '';
-    let segmentKey = 'Segment';
+    let segmentKey = 'Segment 1';
     let currentSegment = 'Semiconductor';
     let currentFilteredData = [];
     
@@ -2099,7 +2099,9 @@ lucide.createIcons({icons});\``);if(typeof d>"u")throw new Error("`createIcons()
     "所在地 / 區域",
     "主要產品",
     "官網",
-    "Segment"
+    "Segment 1",
+    "Segment 2",
+    "Segment 3"
   ],
   "rows": [
     {
@@ -2660,7 +2662,51 @@ lucide.createIcons({icons});\``);if(typeof d>"u")throw new Error("`createIcons()
     function detectKeyColumns() {
       productLineKey = headers.find(h => h.includes('產品線') || h.includes('類別') || h.toLowerCase().includes('category')) || headers[0];
       mainProductKey = headers.find(h => h.includes('產品') || h.includes('品名') || h.includes('品牌') || h.toLowerCase().includes('product')) || headers[0];
-      segmentKey = headers.find(h => h.toLowerCase().includes('segment') || h.includes('大分類') || h.includes('分類')) || 'Segment';
+      segmentKey = headers.find(h => h.toLowerCase() === 'segment 1' || h.toLowerCase() === 'segment' || h.toLowerCase().includes('segment') || h.includes('大分類') || h.includes('分類')) || 'Segment 1';
+    }
+
+    // 🌟 規範化 Segment 名稱（忽略空值、減號、none 等，並校正為標準名稱）
+    function normalizeSegmentName(seg) {
+      if (!seg) return '';
+      const s = String(seg).trim();
+      if (!s || s === '-' || s === '—' || s === '--' || s.toLowerCase() === 'none' || s.toLowerCase() === 'null') {
+        return '';
+      }
+      const matched = SEGMENT_ORDER.find(o => o.toLowerCase() === s.toLowerCase());
+      return matched || s;
+    }
+
+    // 🌟 取得單一產品的所有所屬 Segment（支援 Segment 1, Segment 2, Segment 3）
+    function getItemSegments(item) {
+      if (!item) return [];
+      const segs = new Set();
+
+      // 1. 優先檢查常見的 Segment 欄位
+      const checkKeys = ['Segment 1', 'Segment 2', 'Segment 3', 'segment 1', 'segment 2', 'segment 3', 'Segment', 'segment', '大分類', '分類'];
+      checkKeys.forEach(k => {
+        if (item[k] !== undefined && item[k] !== null) {
+          const norm = normalizeSegmentName(item[k]);
+          if (norm) segs.add(norm);
+        }
+      });
+
+      // 2. 遍歷 item 的所有欄位名稱，動態辨識任何含有 segment 或 分類 的欄位
+      Object.keys(item).forEach(k => {
+        const lk = k.toLowerCase().trim();
+        if (lk.includes('segment') || lk.includes('大分類') || lk.includes('分類')) {
+          const norm = normalizeSegmentName(item[k]);
+          if (norm) segs.add(norm);
+        }
+      });
+
+      return Array.from(segs);
+    }
+
+    // 🌟 判定產品是否屬於目標 Segment（支援一項產品歸屬於多個 Segment）
+    function itemBelongsToSegment(item, targetSegment) {
+      if (!targetSegment) return true;
+      const segs = getItemSegments(item);
+      return segs.some(s => s.toLowerCase() === targetSegment.toLowerCase());
     }
 
     // 將資料依 Segment 及產品線英文名稱 A-Z 進行排序
@@ -2668,8 +2714,10 @@ lucide.createIcons({icons});\``);if(typeof d>"u")throw new Error("`createIcons()
       if (!Array.isArray(rows)) return;
       if (!productLineKey && headers.length > 0) detectKeyColumns();
       rows.sort((a, b) => {
-        const segA = (a[segmentKey] || a['Segment'] || a['segment'] || '').trim();
-        const segB = (b[segmentKey] || b['Segment'] || b['segment'] || '').trim();
+        const segsA = getItemSegments(a);
+        const segsB = getItemSegments(b);
+        const segA = segsA[0] || '';
+        const segB = segsB[0] || '';
         const idxA = SEGMENT_ORDER.indexOf(segA);
         const idxB = SEGMENT_ORDER.indexOf(segB);
         const orderA = idxA === -1 ? 999 : idxA;
@@ -2698,12 +2746,12 @@ lucide.createIcons({icons});\``);if(typeof d>"u")throw new Error("`createIcons()
       const counts = {};
       SEGMENT_ORDER.forEach(s => { counts[s] = 0; });
       rawData.forEach(item => {
-        const s = (item[segmentKey] || item['Segment'] || item['segment'] || '').trim();
-        if (counts[s] !== undefined) {
-          counts[s]++;
-        } else if (s) {
-          counts[s] = (counts[s] || 0) + 1;
-        }
+        const segs = getItemSegments(item);
+        SEGMENT_ORDER.forEach(targetSeg => {
+          if (segs.some(s => s.toLowerCase() === targetSeg.toLowerCase())) {
+            counts[targetSeg]++;
+          }
+        });
       });
 
       // 🌟 僅保留 4 個 Segment Tab（不需要全部）
@@ -2793,8 +2841,7 @@ lucide.createIcons({icons});\``);if(typeof d>"u")throw new Error("`createIcons()
 
       currentFilteredData = rawData.filter(item => {
         if (currentSegment) {
-          const itemSeg = (item[segmentKey] || item['Segment'] || item['segment'] || '').trim();
-          if (itemSeg.toLowerCase() !== currentSegment.toLowerCase()) {
+          if (!itemBelongsToSegment(item, currentSegment)) {
             return false;
           }
         }
@@ -2876,7 +2923,7 @@ lucide.createIcons({icons});\``);if(typeof d>"u")throw new Error("`createIcons()
         const isLogo = logoKey ? (k === logoKey) : k.toLowerCase().includes('logo');
         const isMainDesc = mainProductDescKey ? (k === mainProductDescKey) : k.includes('主要產品');
         const isTitle = (k === mainProductKey);
-        const isSegment = (k === segmentKey) || k.toLowerCase().includes('segment') || k.includes('大分類') || k.includes('分類');
+        const isSegment = k.toLowerCase().includes('segment') || k.includes('大分類') || k.includes('分類');
         if (!isLogo && !isMainDesc && !isTitle && !isSegment && item[k]) {
           let val = item[k];
           if (k.includes('所在地') || k.includes('區域') || k.toLowerCase().includes('location') || k.toLowerCase().includes('region')) {
