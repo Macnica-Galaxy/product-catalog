@@ -22,11 +22,44 @@ jobs:
             const fs = require('fs');
             const url = 'https://script.google.com/macros/s/AKfycbwfn_bO64Jso9QkpmSRWfXTvEIIh8Q4Ovy0uhqycJRhV1j5Dt-9jJWpjqTvi-lFTB4o/exec';
 
-            async function run() {
-              console.log('正在連線 Google Apps Script 取得最新產品目錄...');
-              const res = await fetch(url, { redirect: 'follow' });
-              if (!res.ok) throw new Error('HTTP 錯誤代碼: ' + res.status);
+            async function fetchWithRetry(fetchUrl, maxRetries = 5, delayMs = 5000) {
+              let lastError = null;
+              for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                  console.log(`[嘗試 ${attempt}/${maxRetries}] 正在連線 Google Apps Script 取得最新產品目錄...`);
+                  const controller = new AbortController();
+                  const timeout = setTimeout(() => controller.abort(), 35000);
 
+                  const res = await fetch(fetchUrl, {
+                    redirect: 'follow',
+                    signal: controller.signal,
+                    headers: {
+                      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+                    }
+                  });
+                  clearTimeout(timeout);
+
+                  if (res.ok) {
+                    return res;
+                  }
+                  lastError = new Error('HTTP 錯誤代碼: ' + res.status);
+                  console.warn(`第 ${attempt} 次連線回傳非預期狀態碼 (${res.status})。`);
+                } catch (err) {
+                  lastError = err;
+                  console.warn(`第 ${attempt} 次連線異常: ${err.message}`);
+                }
+
+                if (attempt < maxRetries) {
+                  console.log(`等待 ${delayMs / 1000} 秒後重試...`);
+                  await new Promise(r => setTimeout(r, delayMs));
+                  delayMs += 2000; // 遞增重試等待間隔
+                }
+              }
+              throw lastError || new Error('連線逾時或失敗');
+            }
+
+            async function run() {
+              const res = await fetchWithRetry(url);
               const json = await res.json();
               if (json.error || !json.rows || !Array.isArray(json.rows) || json.rows.length === 0) {
                 throw new Error('取得之資料為空或格式不符，中止更新以保護現有 index.html！');
@@ -76,7 +109,11 @@ jobs:
                 }
 
                 try {
-                  const imgRes = await fetch(logoUrl);
+                  const imgController = new AbortController();
+                  const imgTimeout = setTimeout(() => imgController.abort(), 15000);
+                  const imgRes = await fetch(logoUrl, { signal: imgController.signal });
+                  clearTimeout(imgTimeout);
+
                   if (imgRes.ok) {
                     const contentType = imgRes.headers.get('content-type') || 'image/png';
                     const buf = await imgRes.arrayBuffer();
@@ -100,8 +137,8 @@ jobs:
               console.log('Logo 處理完成 (' + converted + '/' + json.rows.length + ')。進行 Segment 及 A-Z 排序...');
               const SEGMENT_ORDER = ['Semiconductor', 'Software', 'System', 'Cyber Security'];
               json.rows.sort((a, b) => {
-                const segA = (a['Segment'] || '').trim();
-                const segB = (b['Segment'] || '').trim();
+                const segA = (a['Segment 1'] || a['Segment'] || '').trim();
+                const segB = (b['Segment 1'] || b['Segment'] || '').trim();
                 const idxA = SEGMENT_ORDER.indexOf(segA);
                 const idxB = SEGMENT_ORDER.indexOf(segB);
                 const orderA = idxA === -1 ? 999 : idxA;
